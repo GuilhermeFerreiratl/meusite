@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gerador de Jogos de Loteria</title>
-    <!-- Usando Tailwind CSS via CDN para deixar o site bonito de forma fácil -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between">
 
-    <!-- Cabeçalho -->
     <header class="bg-slate-800 border-b border-slate-700 py-4 shadow-md">
         <div class="container mx-auto px-4 flex justify-between items-center">
             <h1 class="text-xl font-bold text-emerald-400 flex items-center gap-2">
@@ -19,10 +17,8 @@
         </div>
     </header>
 
-    <!-- Conteúdo Principal -->
     <main class="container mx-auto px-4 py-8 max-w-4xl flex-grow">
         
-        <!-- Painel de Configuração -->
         <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg mb-8">
             <h2 class="text-lg font-semibold mb-4 text-emerald-300">Painel de Configuração</h2>
             
@@ -39,27 +35,24 @@
                 </div>
             </div>
 
-            <button onclick="gerarJogos()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-lg transition duration-200 shadow-md">
+            <button onclick="gerarJogos()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-3 rounded-lg transition duration-200 shadow-md cursor-pointer">
                 Gerar e Filtrar Jogos
             </button>
         </div>
 
-        <!-- Área de Resultados -->
         <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg">
             <h2 class="text-lg font-semibold mb-4 text-emerald-300">Jogos Gerados (<span id="contadorJogos">0</span>)</h2>
             <div id="resultadoJogos" class="space-y-3 max-h-96 overflow-y-auto pr-2">
-                <p class="text-slate-400 text-sm italic">Clique no botão acima para gerar os jogos baseados nos seus filtros...</p>
+                <p class="text-slate-400 text-sm italic">Clique no botão acima para gerar os jogos...</p>
             </div>
         </div>
 
     </main>
 
-    <!-- Rodapé -->
     <footer class="bg-slate-800 border-t border-slate-700 py-4 text-center text-xs text-slate-400">
         Desenvolvido para integração com GitHub e Codio.
     </footer>
 
-    <!-- Lógica JavaScript para simular/rodar no navegador -->
     <script>
         function ehPrimo(n) {
             if (n < 2) return false;
@@ -69,95 +62,100 @@
             return true;
         }
 
-        // Função simples para combinar elementos (equivalente ao itertools.combinations do Python)
-        function combinar(arr, k) {
-            let i, j, subscripts, ret = [];
-            subscripts = [];
-            function permute(pos, start) {
-                if (pos === k) {
-                    let temp = [];
-                    for (i = 0; i < k; i++) temp.push(arr[subscripts[i]]);
-                    ret.push(temp);
+        // Função rápida de combinação otimizada
+        function obterCombinacoes(arr, k) {
+            let resultado = [];
+            function comeco(inicio, atual) {
+                if (atual.length === k) {
+                    resultado.push([...atual]);
                     return;
                 }
-                for (i = start; i <= arr.length - (k - pos); i++) {
-                    subscripts[pos] = i;
-                    permute(pos + 1, i + 1);
+                for (let i = inicio; i < arr.length; i++) {
+                    atual.push(arr[i]);
+                    comeco(i + 1, atual);
+                    atual.pop();
                 }
             }
-            permute(0, 0);
-            return ret;
+            comeco(0, []);
+            return resultado;
         }
 
         function gerarJogos() {
-            const input21 = document.getElementById('grupo21').value.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-            const inputAnterior = document.getElementById('antesrio').value.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+            const input21Str = document.getElementById('grupo21').value;
+            const inputAnteriorStr = document.getElementById('anterior').value;
             const containerResultados = document.getElementById('resultadoJogos');
             const contadorEl = document.getElementById('contadorJogos');
 
-            containerResultados.innerHTML = "";
-            
-            if (input21.length < 16) {
-                alert("Você precisa digitar pelo menos 16 números no grupo principal!");
-                return;
-            }
+            const input21 = input21Str.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+            const inputAnterior = inputAnteriorStr.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
 
-            let combinacoes = combinar(input21, 16);
-            let jogosValidos = [];
+            containerResultados.innerHTML = `<p class="text-emerald-400 text-sm animate-pulse">Processando combinações e filtros...</p>`;
 
-            for (let jogo of combinacoes) {
-                let pares = jogo.filter(n => n % 2 === 0);
-                let impares = jogo.filter(n => n % 2 !== 0);
-                let primos = jogo.filter(n => ehPrimo(n));
-                
-                let somaTotal = jogo.reduce((a, b) => a + b, 0);
-                let somaPontas = jogo[0] + jogo[jogo.length - 1];
+            setTimeout(() => {
+                if (input21.length < 16) {
+                    containerResultados.innerHTML = `<p class="text-red-400 text-sm">Erro: Você precisa digitar pelo menos 16 números válidos!</p>`;
+                    return;
+                }
 
-                // Filtro de exatos 11 repetidos do anterior
-                let repetidos = jogo.filter(n => inputAnterior.includes(n)).length;
-                if (repetidos !== 11) continue;
+                let combinacoes = obterCombinacoes(input21, 16);
+                let jogosValidos = [];
 
-                // Filtros de Pares (ex: entre 7 e 9) e Primos (ex: entre 4 e 6)
-                if (pares.length < 7 || pares.length > 9) continue;
-                if (primos.length < 4 || primos.length > 6) continue;
+                for (let jogo of combinacoes) {
+                    let pares = jogo.filter(n => n % 2 === 0);
+                    let impares = jogo.filter(n => n % 2 !== 0);
+                    let primos = jogo.filter(n => ehPrimo(n));
+                    
+                    let somaTotal = jogo.reduce((a, b) => a + b, 0);
+                    let somaPontas = jogo[0] + jogo[jogo.length - 1];
 
-                jogosValidos.push({
-                    jogo: jogo,
-                    pares: pares.length,
-                    impares: impares.length,
-                    primos: primos.length,
-                    repetidos: repetidos,
-                    soma: somaTotal,
-                    somaPontas: somaPontas
+                    // Filtro de exatos 11 repetidos do anterior
+                    let repetidos = jogo.filter(n => inputAnterior.includes(n)).length;
+                    if (repetidos !== 11) continue;
+
+                    // Filtros configurados (Pares entre 7 e 9, Primos entre 4 e 6)
+                    if (pares.length < 7 || pares.length > 9) continue;
+                    if (primos.length < 4 || primos.length > 6) continue;
+
+                    jogosValidos.push({
+                        jogo: jogo,
+                        pares: pares.length,
+                        impares: impares.length,
+                        primos: primos.length,
+                        repetidos: repetidos,
+                        soma: somaTotal,
+                        somaPontas: somaPontas
+                    });
+
+                    if (jogosValidos.length >= 100) break; // Limita aos primeiros 100 jogos para rodar rápido
+                }
+
+                contadorEl.innerText = jogosValidos.length;
+                containerResultados.innerHTML = "";
+
+                if (jogosValidos.length === 0) {
+                    containerResultados.innerHTML = `<p class="text-amber-400 text-sm">Nenhum jogo encontrado com os filtros atuais. Tente ajustar os números.</p>`;
+                    return;
+                }
+
+                jogosValidos.forEach((item, index) => {
+                    let div = document.createElement('div');
+                    div.className = "bg-slate-900 p-3 rounded-lg border border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center text-sm gap-2";
+                    div.innerHTML = `
+                        <div>
+                            <span class="font-bold text-emerald-400 mr-2">#${index + 1}</span>
+                            <span class="tracking-wide text-white">${item.jogo.join(', ')}</span>
+                        </div>
+                        <div class="text-xs text-slate-400 flex gap-3">
+                            <span>Pares: <strong class="text-slate-200">${item.pares}</strong></span>
+                            <span>Ímpares: <strong class="text-slate-200">${item.impares}</strong></span>
+                            <span>Primos: <strong class="text-slate-200">${item.primos}</strong></span>
+                            <span>Repetidos: <strong class="text-emerald-400">${item.repetidos}</strong></span>
+                            <span>Soma: <strong class="text-slate-200">${item.soma}</strong></span>
+                        </div>
+                    `;
+                    containerResultados.appendChild(div);
                 });
-
-                if (jogosValidos.length >= 50) break; // Limita a 50 exibidos na tela para não travar
-            }
-
-            contadorEl.innerText = jogosValidos.length;
-
-            if (jogosValidos.length === 0) {
-                containerResultados.innerHTML = `<p class="text-amber-400 text-sm">Nenhum jogo encontrado com os filtros atuais.</p>`;
-                return;
-            }
-
-            jogosValidos.forEach((item, index) => {
-                let div = document.createElement('div');
-                div.className = "bg-slate-900 p-3 rounded-lg border border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center text-sm gap-2";
-                div.innerHTML = `
-                    <div>
-                        <span class="font-bold text-emerald-400 mr-2">#${index + 1}</span>
-                        <span class="tracking-wide text-white">${item.jogo.join(', ')}</span>
-                    </div>
-                    <div class="text-xs text-slate-400 flex gap-3">
-                        <span>Pares: <strong class="text-slate-200">${item.pares}</strong></span>
-                        <span>Ímpares: <strong class="text-slate-200">${item.impares}</strong></span>
-                        <span>Repetidos: <strong class="text-emerald-400">${item.repetidos}</strong></span>
-                        <span>Soma: <strong class="text-slate-200">${item.soma}</strong></span>
-                    </div>
-                `;
-                containerResultados.appendChild(div);
-            });
+            }, 50);
         }
     </script>
 </body>
